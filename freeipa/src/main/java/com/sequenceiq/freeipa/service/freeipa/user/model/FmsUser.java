@@ -1,6 +1,7 @@
 package com.sequenceiq.freeipa.service.freeipa.user.model;
 
 import java.util.Objects;
+import java.util.Optional;
 
 public class FmsUser {
 
@@ -9,6 +10,8 @@ public class FmsUser {
     private String firstName;
 
     private String lastName;
+
+    private Optional<String> azureObjectId = Optional.empty();
 
     public String getName() {
         return name;
@@ -37,6 +40,15 @@ public class FmsUser {
         return this;
     }
 
+    public Optional<String> getAzureObjectId() {
+        return azureObjectId;
+    }
+
+    public FmsUser withAzureObjectId(Optional<String> azureObjectId) {
+        this.azureObjectId = azureObjectId;
+        return this;
+    }
+
     @Override
     public boolean equals(Object o) {
         if (this == o) {
@@ -49,12 +61,13 @@ public class FmsUser {
         FmsUser other = (FmsUser) o;
         return Objects.equals(this.name, other.name)
                 && Objects.equals(this.firstName, other.firstName)
-                && Objects.equals(this.lastName, other.lastName);
+                && Objects.equals(this.lastName, other.lastName)
+                && Objects.equals(this.azureObjectId, other.azureObjectId);
     }
 
     @Override
     public int hashCode() {
-        return Objects.hash(name, firstName, lastName);
+        return Objects.hash(name, firstName, lastName, azureObjectId);
     }
 
     @Override
@@ -63,6 +76,7 @@ public class FmsUser {
                 + "name='" + name + '\''
                 + ", firstName='" + firstName + '\''
                 + ", lastName='" + lastName + '\''
+                + ", azureObjectId='" + azureObjectId + '\''
                 + '}';
     }
 }

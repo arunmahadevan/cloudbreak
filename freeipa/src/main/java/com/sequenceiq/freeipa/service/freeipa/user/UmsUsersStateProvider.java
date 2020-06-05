@@ -13,10 +13,12 @@ import java.util.stream.Collectors;
 
 import javax.inject.Inject;
 
+import com.google.common.collect.Iterables;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 
+import com.cloudera.thunderhead.service.usermanagement.UserManagementProto.CloudIdentity;
 import com.cloudera.thunderhead.service.usermanagement.UserManagementProto.Group;
 import com.cloudera.thunderhead.service.usermanagement.UserManagementProto.ListWorkloadAdministrationGroupsForMemberResponse;
 import com.cloudera.thunderhead.service.usermanagement.UserManagementProto.MachineUser;
@@ -217,11 +219,26 @@ public class UmsUsersStateProvider {
         usersStateBuilder.addMemberToGroup(UserSyncConstants.CDP_USERSYNC_INTERNAL_GROUP, username);
     }
 
+    private Optional<String> getOptionalAzureObjectId(List<CloudIdentity> cloudIdentities) {
+        List<CloudIdentity> azureCloudIdentities = cloudIdentities.stream()
+                .filter(cloudIdentity -> cloudIdentity.getCloudIdentityDomain().hasAzureCloudIdentityDomain())
+                .collect(Collectors.toList());
+        if (azureCloudIdentities.isEmpty()) {
+            return Optional.empty();
+        }
+        if (azureCloudIdentities.size() > 1) {
+            throw new IllegalStateException(String.format("List contains multiple azure cloud identities = %s", cloudIdentities));
+        }
+        String azureObjectId = Iterables.getOnlyElement(azureCloudIdentities).getCloudIdentityName().getAzureCloudIdentityName().getObjectId();
+        return Optional.of(azureObjectId);
+    }
+
     private FmsUser umsUserToUser(User umsUser) {
         FmsUser fmsUser = new FmsUser();
         fmsUser.withName(umsUser.getWorkloadUsername());
         fmsUser.withFirstName(getOrDefault(umsUser.getFirstName(), "None"));
         fmsUser.withLastName(getOrDefault(umsUser.getLastName(), "None"));
+        fmsUser.withAzureObjectId(getOptionalAzureObjectId(umsUser.getCloudIdentitiesList()));
         return fmsUser;
     }
 
@@ -241,12 +258,14 @@ public class UmsUsersStateProvider {
         // TODO what should the appropriate first and last name be for machine users?
         fmsUser.withFirstName("Machine");
         fmsUser.withLastName("User");
+        fmsUser.withAzureObjectId(getOptionalAzureObjectId(umsMachineUser.getCloudIdentitiesList()));
         return fmsUser;
     }
 
     private FmsGroup umsGroupToGroup(Group umsGroup) {
         FmsGroup fmsGroup = new FmsGroup();
         fmsGroup.withName(umsGroup.getGroupName());
+        fmsGroup.withAzureObjectId(getOptionalAzureObjectId(umsGroup.getCloudIdentitiesList()));
         return fmsGroup;
     }
 

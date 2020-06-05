@@ -19,6 +19,8 @@ import java.util.stream.Stream;
 
 import javax.inject.Inject;
 
+import com.sequenceiq.sdx.api.endpoint.SdxEndpoint;
+import com.sequenceiq.sdx.api.model.SetRangerCloudIdentityMappingRequest;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Qualifier;
@@ -101,6 +103,9 @@ public class UserSyncService {
 
     @Inject
     private WorkloadCredentialService workloadCredentialService;
+
+    @Inject
+    private SdxEndpoint sdxEndpoint;
 
     public Operation synchronizeUsers(String accountId, String actorCrn, Set<String> environmentCrnFilter,
             Set<String> userCrnFilter, Set<String> machineUserCrnFilter) {
@@ -263,6 +268,10 @@ public class UserSyncService {
                 workloadCredentialService.setWorkloadCredentials(freeIpaClient, umsUsersState.getUsersWorkloadCredentialMap(), warnings::put);
             }
 
+            if (fullSync) {
+                syncAzureObjectIds(stack, umsUsersState);
+            }
+
             if (warnings.isEmpty()) {
                 return SyncStatusDetail.succeed(environmentCrn);
             } else {
@@ -272,6 +281,21 @@ public class UserSyncService {
             LOGGER.warn("Failed to synchronize environment {}", environmentCrn, e);
             return SyncStatusDetail.fail(environmentCrn, e.getLocalizedMessage(), warnings);
         }
+    }
+
+    private void syncAzureObjectIds(Stack stack, UmsUsersState umsUsersState) {
+        UsersState userState = umsUsersState.getUsersState();
+        Map<String, String> usersToAzureObjectIdMap = userState.getUsers().stream()
+                .filter(user -> user.getAzureObjectId().isPresent())
+                .collect(Collectors.toMap(FmsUser::getName, user -> user.getAzureObjectId().get()));
+        Map<String, String> groupsToAzureObjectIdMap = userState.getGroups().stream()
+                .filter(group -> group.getAzureObjectId().isPresent())
+                .collect(Collectors.toMap(FmsGroup::getName, group -> group.getAzureObjectId().get()));
+
+        SetRangerCloudIdentityMappingRequest setRangerCloudIdentityMappingRequest = new SetRangerCloudIdentityMappingRequest();
+        setRangerCloudIdentityMappingRequest.setAzureUserMapping(usersToAzureObjectIdMap);
+        setRangerCloudIdentityMappingRequest.setAzureGroupMapping(groupsToAzureObjectIdMap);
+        sdxEndpoint.setRangerCloudIdentityMapping(stack.getEnvironmentCrn(), setRangerCloudIdentityMappingRequest);
     }
 
     @VisibleForTesting

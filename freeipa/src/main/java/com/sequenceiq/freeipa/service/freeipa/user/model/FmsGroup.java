@@ -1,18 +1,30 @@
 package com.sequenceiq.freeipa.service.freeipa.user.model;
 
 import java.util.Objects;
+import java.util.Optional;
 
 public class FmsGroup {
 
     private String name;
+
+    private Optional<String> azureObjectId = Optional.empty();
 
     public FmsGroup withName(String name) {
         this.name = name;
         return this;
     }
 
+    public FmsGroup withAzureObjectId(Optional<String> azureObjectId) {
+        this.azureObjectId = azureObjectId;
+        return this;
+    }
+
     public String getName() {
         return name;
+    }
+
+    public Optional<String> getAzureObjectId() {
+        return azureObjectId;
     }
 
     @Override
@@ -26,19 +38,20 @@ public class FmsGroup {
 
         FmsGroup other = (FmsGroup) o;
 
-        return Objects.equals(this.name, other.name);
-
+        return Objects.equals(this.name, other.name) &&
+                Objects.equals(this.azureObjectId, other.azureObjectId);
     }
 
     @Override
     public int hashCode() {
-        return Objects.hash(name);
+        return Objects.hash(name, azureObjectId);
     }
 
     @Override
     public String toString() {
-        return "FmsGroup{"
-                + "name='" + name + '\''
-                + '}';
+        return "FmsGroup{" +
+                "name='" + name + '\'' +
+                ", azureObjectId=" + azureObjectId +
+                '}';
     }
 }

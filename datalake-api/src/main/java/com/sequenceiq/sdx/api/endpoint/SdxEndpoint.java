@@ -15,6 +15,7 @@ import javax.ws.rs.Produces;
 import javax.ws.rs.QueryParam;
 import javax.ws.rs.core.MediaType;
 
+import com.sequenceiq.sdx.api.model.SetRangerCloudIdentityMappingRequest;
 import org.springframework.validation.annotation.Validated;
 
 import com.sequenceiq.cloudbreak.jerseyclient.RetryAndMetrics;
@@ -164,5 +165,11 @@ public interface SdxEndpoint {
     @Produces(MediaType.APPLICATION_JSON)
     @ApiOperation(value = "list advertised datalake versions", produces = MediaType.APPLICATION_JSON, nickname = "advertisedruntimes")
     List<AdvertisedRuntime> advertisedRuntimes();
+
+    @POST
+    @Path("/crn/{crn}/ranger_cloud_identity_mapping")
+    @Produces(MediaType.APPLICATION_JSON)
+    @ApiOperation(value = "set ranger cloud identity mapping", produces = MediaType.APPLICATION_JSON, nickname = "setRangerCloudIdentityMapping")
+    void setRangerCloudIdentityMapping(@PathParam("crn") String crn, SetRangerCloudIdentityMappingRequest request);
 
 }

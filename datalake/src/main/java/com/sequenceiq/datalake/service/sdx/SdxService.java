@@ -509,6 +509,12 @@ public class SdxService implements ResourceIdProvider, ResourceBasedCrnProvider 
         return sdxClusterRepository.findByAccountIdAndEnvCrnAndDeletedIsNull(accountIdFromCrn, envCrn);
     }
 
+    public List<SdxCluster> listSdxByEnvCrn(String envCrn) {
+        LOGGER.info("Listing SDX clusters by environment crn {}", envCrn);
+        String accountIdFromCrn = getAccountIdFromCrn(envCrn);
+        return sdxClusterRepository.findByAccountIdAndEnvCrnAndDeletedIsNull(accountIdFromCrn, envCrn);
+    }
+
     public List<SdxCluster> listSdx(String userCrn, String envName) {
         String accountIdFromCrn = getAccountIdFromCrn(userCrn);
         if (envName != null) {

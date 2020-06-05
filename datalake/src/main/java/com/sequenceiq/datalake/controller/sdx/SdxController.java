@@ -7,6 +7,9 @@ import java.util.stream.Collectors;
 import javax.inject.Inject;
 import javax.validation.Valid;
 
+import com.sequenceiq.authorization.annotation.DisableCheckPermissions;
+import com.sequenceiq.datalake.cm.CloudIdentityRangerSyncService;
+import com.sequenceiq.sdx.api.model.SetRangerCloudIdentityMappingRequest;
 import org.apache.commons.lang3.tuple.Pair;
 import org.springframework.stereotype.Controller;
 
@@ -67,6 +70,9 @@ public class SdxController implements SdxEndpoint {
 
     @Inject
     private SdxMetricService metricService;
+
+    @Inject
+    private CloudIdentityRangerSyncService cloudIdentityRangerSyncService;
 
     @Override
     @CheckPermissionByAccount(action = AuthorizationResourceAction.CREATE_DATALAKE)
@@ -237,6 +243,12 @@ public class SdxController implements SdxEndpoint {
     @CheckPermissionByAccount(action = AuthorizationResourceAction.DATALAKE_READ)
     public List<AdvertisedRuntime> advertisedRuntimes() {
         return cdpConfigService.getAdvertisedRuntimes();
+    }
+
+    @Override
+    @DisableCheckPermissions
+    public void setRangerCloudIdentityMapping(String envCrn, SetRangerCloudIdentityMappingRequest request) {
+        cloudIdentityRangerSyncService.setAzureCloudIdentityMapping(envCrn, request.getAzureUserMapping(), request.getAzureGroupMapping());
     }
 
 }

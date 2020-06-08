@@ -19,6 +19,7 @@ import java.util.stream.Stream;
 
 import javax.inject.Inject;
 
+import com.sequenceiq.cloudbreak.auth.altus.EntitlementService;
 import com.sequenceiq.sdx.api.endpoint.SdxEndpoint;
 import com.sequenceiq.sdx.api.model.SetRangerCloudIdentityMappingRequest;
 import org.slf4j.Logger;
@@ -106,6 +107,9 @@ public class UserSyncService {
 
     @Inject
     private SdxEndpoint sdxEndpoint;
+
+    @Inject
+    private EntitlementService entitlementService;
 
     public Operation synchronizeUsers(String accountId, String actorCrn, Set<String> environmentCrnFilter,
             Set<String> userCrnFilter, Set<String> machineUserCrnFilter) {
@@ -268,7 +272,7 @@ public class UserSyncService {
                 workloadCredentialService.setWorkloadCredentials(freeIpaClient, umsUsersState.getUsersWorkloadCredentialMap(), warnings::put);
             }
 
-            if (fullSync) {
+            if (fullSync && entitlementService.cloudIdentityMappingEnabled(INTERNAL_ACTOR_CRN, stack.getAccountId())) {
                 syncAzureObjectIds(stack, umsUsersState);
             }
 

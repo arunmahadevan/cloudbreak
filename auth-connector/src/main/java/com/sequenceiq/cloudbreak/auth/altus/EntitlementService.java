@@ -52,6 +52,10 @@ public class EntitlementService {
         return isEntitlementRegistered(actorCrn, accountId, "CDP_RUNTIME_UPGRADE");
     }
 
+    public boolean cloudIdentityMappingEnabled(String actorCrn, String accountId) {
+        return isEntitlementRegistered(actorCrn, accountId, "CDP_CLOUD_IDENTITY_MAPPING");
+    }
+
     public List<String> getEntitlements(String actorCrn, String accountId) {
         return getAccount(actorCrn, accountId).getEntitlementsList()
                 .stream()

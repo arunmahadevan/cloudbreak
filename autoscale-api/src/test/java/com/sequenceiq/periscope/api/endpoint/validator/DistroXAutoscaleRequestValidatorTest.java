@@ -19,8 +19,12 @@ import javax.validation.ConstraintValidatorContext.ConstraintViolationBuilder.No
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
+import org.mockito.InjectMocks;
+import org.mockito.Mock;
+import org.mockito.MockitoAnnotations;
 import org.mockito.junit.MockitoJUnitRunner;
 
+import com.sequenceiq.cloudbreak.message.CloudbreakMessagesService;
 import com.sequenceiq.periscope.api.model.AdjustmentType;
 import com.sequenceiq.periscope.api.model.DistroXAutoscaleClusterRequest;
 import com.sequenceiq.periscope.api.model.LoadAlertRequest;
@@ -30,6 +34,7 @@ import com.sequenceiq.periscope.api.model.TimeAlertRequest;
 @RunWith(MockitoJUnitRunner.class)
 public class DistroXAutoscaleRequestValidatorTest {
 
+    @InjectMocks
     private DistroXAutoscaleRequestValidator underTest = new DistroXAutoscaleRequestValidator();
 
     private ConstraintViolationBuilder constraintViolationBuilder;
@@ -38,8 +43,12 @@ public class DistroXAutoscaleRequestValidatorTest {
 
     private ConstraintValidatorContext validatorContext;
 
+    @Mock
+    private CloudbreakMessagesService messagesService;
+
     @Before
     public void setupMocks() {
+        MockitoAnnotations.initMocks(this);
         constraintViolationBuilder = mock(ConstraintValidatorContext.ConstraintViolationBuilder.class);
         nodeBuilderCustomizableContext =
                 mock(ConstraintValidatorContext.ConstraintViolationBuilder.NodeBuilderCustomizableContext.class);

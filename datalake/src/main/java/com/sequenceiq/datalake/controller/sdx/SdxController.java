@@ -11,6 +11,7 @@ import com.sequenceiq.authorization.annotation.DisableCheckPermissions;
 import com.sequenceiq.datalake.cm.CloudIdentityRangerSyncService;
 import com.sequenceiq.sdx.api.model.SetRangerCloudIdentityMappingRequest;
 import org.apache.commons.lang3.tuple.Pair;
+import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Controller;
 
 import com.sequenceiq.authorization.annotation.AuthorizationResource;
@@ -42,6 +43,8 @@ import com.sequenceiq.sdx.api.model.SdxClusterDetailResponse;
 import com.sequenceiq.sdx.api.model.SdxClusterRequest;
 import com.sequenceiq.sdx.api.model.SdxClusterResponse;
 import com.sequenceiq.sdx.api.model.SdxRepairRequest;
+
+import static com.sequenceiq.cloudbreak.auth.altus.GrpcUmsClient.INTERNAL_ACTOR_CRN;
 
 @Controller
 @AuthorizationResource
@@ -245,10 +248,19 @@ public class SdxController implements SdxEndpoint {
         return cdpConfigService.getAdvertisedRuntimes();
     }
 
+    // custom authorization check
     @Override
     @DisableCheckPermissions
     public void setRangerCloudIdentityMapping(String envCrn, SetRangerCloudIdentityMappingRequest request) {
+        checkIsInternalActor();
         cloudIdentityRangerSyncService.setAzureCloudIdentityMapping(envCrn, request.getAzureUserMapping(), request.getAzureGroupMapping());
+    }
+
+    private void checkIsInternalActor() {
+        String callingActor = ThreadBasedUserCrnProvider.getUserCrn();
+        if (!INTERNAL_ACTOR_CRN.equals(callingActor)) {
+            throw new AccessDeniedException(String.format("User %s does not have permission to call this endpoint", callingActor));
+        }
     }
 
 }

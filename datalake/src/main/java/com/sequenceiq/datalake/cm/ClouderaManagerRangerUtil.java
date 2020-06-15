@@ -96,6 +96,11 @@ public class ClouderaManagerRangerUtil {
         }
     }
 
+    private boolean supportsCloudIdMapping(RolesResourceApi rolesResourceApi, String clusterName, String rangerUserSyncRole) throws ApiException {
+        ApiConfigList configList = rolesResourceApi.readRoleConfig(clusterName, RANGER_SERVICE_NAME, rangerUserSyncRole, "full");
+        return configList.getItems().stream().map(ApiConfig::getName).anyMatch(configName -> configName.equals(AZURE_USER_MAPPING));
+    }
+
     public void setAzureCloudIdentityMapping(String stackCrn, Map<String, String> azureUserMapping, Map<String, String> azureGroupMapping) throws ApiException {
         // NOTE: The necessary configs changed here are only available in CM7.2-1
         // TODO Skip setting role and trigerring refresh if the configs haven't changed
@@ -103,6 +108,10 @@ public class ClouderaManagerRangerUtil {
         String clusterName = getClusterName(client);
         String rangerUserSyncRoleName = getRangerUserSyncRoleName(client, clusterName);
         RolesResourceApi rolesResourceApi = clouderaManagerApiFactory.getRolesResourceApi(client);
+        if (!supportsCloudIdMapping(rolesResourceApi, clusterName, rangerUserSyncRoleName)) {
+            LOGGER.info("This version of CM does not support cloud identity mapping. Skipping.");
+            return;
+        }
         ApiConfigList configList = new ApiConfigList();
         configList.addItemsItem(newCloudIdentityConfig(AZURE_USER_MAPPING, azureUserMapping));
         configList.addItemsItem(newCloudIdentityConfig(AZURE_GROUP_MAPPING, azureGroupMapping));

@@ -20,6 +20,7 @@ import java.util.stream.Stream;
 import javax.inject.Inject;
 
 import com.sequenceiq.cloudbreak.auth.altus.EntitlementService;
+import com.sequenceiq.cloudbreak.common.mappable.CloudPlatform;
 import com.sequenceiq.sdx.api.endpoint.SdxEndpoint;
 import com.sequenceiq.sdx.api.model.SetRangerCloudIdentityMappingRequest;
 import org.slf4j.Logger;
@@ -272,8 +273,10 @@ public class UserSyncService {
                 workloadCredentialService.setWorkloadCredentials(freeIpaClient, umsUsersState.getUsersWorkloadCredentialMap(), warnings::put);
             }
 
-            if (fullSync && entitlementService.cloudIdentityMappingEnabled(INTERNAL_ACTOR_CRN, stack.getAccountId())) {
-                syncAzureObjectIds(stack, umsUsersState);
+            boolean hasCloudIdentityEntitlement = entitlementService.cloudIdentityMappingEnabled(INTERNAL_ACTOR_CRN, stack.getAccountId());
+            // TODO For now we only sync azure object ids during full sync. We should eventually allow more granular syncs (actor level and group level sync).
+            if (hasCloudIdentityEntitlement && fullSync && CloudPlatform.AZURE.equalsIgnoreCase(stack.getCloudPlatform())) {
+                syncAzureObjectIds(stack, umsUsersState, warnings::put);
             }
 
             if (warnings.isEmpty()) {
@@ -287,7 +290,10 @@ public class UserSyncService {
         }
     }
 
-    private void syncAzureObjectIds(Stack stack, UmsUsersState umsUsersState) {
+    private void syncAzureObjectIds(Stack stack, UmsUsersState umsUsersState, BiConsumer<String, String> warnings) {
+        String envCrn = stack.getEnvironmentCrn();
+        LOGGER.info("Syncing Azure Object IDs for environment {}", envCrn);
+
         UsersState userState = umsUsersState.getUsersState();
         Map<String, String> usersToAzureObjectIdMap = userState.getUsers().stream()
                 .filter(user -> user.getAzureObjectId().isPresent())
@@ -299,7 +305,13 @@ public class UserSyncService {
         SetRangerCloudIdentityMappingRequest setRangerCloudIdentityMappingRequest = new SetRangerCloudIdentityMappingRequest();
         setRangerCloudIdentityMappingRequest.setAzureUserMapping(usersToAzureObjectIdMap);
         setRangerCloudIdentityMappingRequest.setAzureGroupMapping(groupsToAzureObjectIdMap);
-        sdxEndpoint.setRangerCloudIdentityMapping(stack.getEnvironmentCrn(), setRangerCloudIdentityMappingRequest);
+
+        try {
+            sdxEndpoint.setRangerCloudIdentityMapping(envCrn, setRangerCloudIdentityMappingRequest);
+        } catch (Exception e) {
+            LOGGER.warn("Failed to set cloud identity mapping for environment {}", envCrn, e);
+            warnings.accept(envCrn, "Failed to set cloud identity mapping");
+        }
     }
 
     @VisibleForTesting

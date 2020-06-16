@@ -108,7 +108,6 @@ if [[ "$CIRCLECI" ]]; then
 
     export DOCKER_CLIENT_TIMEOUT=120
     export COMPOSE_HTTP_TIMEOUT=120
-
     $INTEGCB_LOCATION/.deps/bin/docker-compose up test | tee test.out
     echo -e "\n\033[1;96m--- Test finished\033[0m\n"
 

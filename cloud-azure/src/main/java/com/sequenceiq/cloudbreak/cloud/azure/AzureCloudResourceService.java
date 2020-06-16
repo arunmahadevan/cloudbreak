@@ -189,6 +189,10 @@ public class AzureCloudResourceService {
         cloudResources.forEach(cloudResource -> notifier.notifyAllocation(cloudResource, cloudContext));
     }
 
+    public void deleteCloudResources(PersistenceNotifier notifier, CloudContext cloudContext, List<CloudResource> cloudResources) {
+        cloudResources.forEach(cloudResource -> notifier.notifyDeletion(cloudResource, cloudContext));
+    }
+
     public List<CloudResource> collectAndSaveNetworkAndSubnet(String resourceGroupName, String virtualNetwork, PersistenceNotifier notifier,
             CloudContext cloudContext, List<String> subnetNameList, String networkName, AzureClient client) {
         List<CloudResource> resources = new ArrayList<>();

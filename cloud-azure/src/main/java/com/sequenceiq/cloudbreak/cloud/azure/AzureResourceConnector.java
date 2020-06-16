@@ -131,21 +131,28 @@ public class AzureResourceConnector implements ResourceConnector<Map<String, Map
                     azureStorage.createStorage(client, entry.getKey(), entry.getValue(), resourceGroupName, region, encrytionNeeded, stack.getTags());
                 }
             }
+            List<CloudResource> cloudResources;
             if (!client.templateDeploymentExists(resourceGroupName, stackName)) {
                 Deployment templateDeployment = client.createTemplateDeployment(resourceGroupName, stackName, template, parameters);
                 LOGGER.debug("Created template deployment for launch: {}", templateDeployment.exportTemplate().template());
 
-                List<CloudResource> cloudResources = azureCloudResourceService.getCloudResources(templateDeployment);
+                cloudResources = azureCloudResourceService.getCloudResources(templateDeployment);
                 azureCloudResourceService.saveCloudResources(notifier, cloudContext, cloudResources);
+            } else {
+                Deployment templateDeployment = client.getTemplateDeployment(resourceGroupName, stackName);
+                LOGGER.debug("Get template deployment for launch as it exists: {}", templateDeployment.exportTemplate().template());
 
-                String networkName = azureUtils.getCustomNetworkId(stack.getNetwork());
-                List<String> subnetNameList = azureUtils.getCustomSubnetIds(stack.getNetwork());
-                List<CloudResource> networkResources = azureCloudResourceService.collectAndSaveNetworkAndSubnet(
-                        resourceGroupName, stackName, notifier, cloudContext, subnetNameList, networkName, client);
-                List<CloudResource> instances = azureCloudResourceService.getInstanceCloudResources(
-                        stackName, cloudResources, stack.getGroups(), resourceGroupName);
-                azureComputeResourceService.buildComputeResourcesForLaunch(ac, stack, adjustmentType, threshold, instances, networkResources);
+                cloudResources = azureCloudResourceService.getCloudResources(templateDeployment);
+                azureCloudResourceService.deleteCloudResources(notifier, cloudContext, cloudResources);
+                azureCloudResourceService.saveCloudResources(notifier, cloudContext, cloudResources);
             }
+            String networkName = azureUtils.getCustomNetworkId(stack.getNetwork());
+            List<String> subnetNameList = azureUtils.getCustomSubnetIds(stack.getNetwork());
+            List<CloudResource> networkResources = azureCloudResourceService.collectAndSaveNetworkAndSubnet(
+                    resourceGroupName, stackName, notifier, cloudContext, subnetNameList, networkName, client);
+            List<CloudResource> instances = azureCloudResourceService.getInstanceCloudResources(
+                    stackName, cloudResources, stack.getGroups(), resourceGroupName);
+            azureComputeResourceService.buildComputeResourcesForLaunch(ac, stack, adjustmentType, threshold, instances, networkResources);
         } catch (CloudException e) {
             LOGGER.info("Provisioning error, cloud exception happened: ", e);
             if (e.body() != null && e.body().details() != null) {

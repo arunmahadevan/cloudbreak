@@ -206,6 +206,7 @@ public class AppConfig implements ResourceLoaderAware {
         executor.setQueueCapacity(intermediateQueueCapacity);
         executor.setThreadNamePrefix("intermediateBuilderExecutor-");
         executor.setTaskDecorator(new MDCCleanerTaskDecorator());
+        executor.setWaitForTasksToCompleteOnShutdown(true);
         executor.initialize();
         return executor;
     }
@@ -217,6 +218,7 @@ public class AppConfig implements ResourceLoaderAware {
         executor.setQueueCapacity(queueCapacity);
         executor.setThreadNamePrefix("resourceBuilderExecutor-");
         executor.setTaskDecorator(new MDCCleanerTaskDecorator());
+        executor.setWaitForTasksToCompleteOnShutdown(true);
         executor.initialize();
         return executor;
     }

@@ -25,6 +25,7 @@ import org.springframework.util.CollectionUtils;
 import com.microsoft.azure.PagedList;
 import com.microsoft.azure.management.compute.Disk;
 import com.microsoft.azure.management.resources.fluentcore.arm.AvailabilityZoneId;
+import com.sequenceiq.cloudbreak.cloud.PlatformParametersConsts;
 import com.sequenceiq.cloudbreak.cloud.azure.AzureDiskType;
 import com.sequenceiq.cloudbreak.cloud.azure.AzureResourceGroupMetadataProvider;
 import com.sequenceiq.cloudbreak.cloud.azure.AzureUtils;
@@ -80,10 +81,11 @@ public class AzureVolumeResourceBuilder extends AbstractAzureComputeBuilder {
                 .filter(cloudResource -> CommonStatus.DETACHED.equals(cloudResource.getStatus()) || vm.getInstanceId().equals(cloudResource.getInstanceId()))
                 .findFirst();
 
-        return List.of(reattachableVolumeSet.orElseGet(createVolumeSet(privateId, auth, group, vm)));
+        return List.of(reattachableVolumeSet.orElseGet(createVolumeSet(privateId, auth, group, vm,
+                context.getStringParameter(PlatformParametersConsts.RESOURCE_CRN_PARAMETER))));
     }
 
-    private Supplier<CloudResource> createVolumeSet(long privateId, AuthenticatedContext auth, Group group, CloudResource vm) {
+    private Supplier<CloudResource> createVolumeSet(long privateId, AuthenticatedContext auth, Group group, CloudResource vm, String stackCrn) {
         return () -> {
             AzureResourceNameService resourceNameService = getResourceNameService();
 
@@ -97,7 +99,7 @@ public class AzureVolumeResourceBuilder extends AbstractAzureComputeBuilder {
             return new Builder()
                     .persistent(true)
                     .type(resourceType())
-                    .name(resourceNameService.resourceName(resourceType(), stackName, groupName, privateId))
+                    .name(resourceNameService.resourceName(resourceType(), stackName, groupName, privateId, stackCrn))
                     .group(group.getName())
                     .status(CommonStatus.REQUESTED)
                     .params(Map.of(CloudResource.ATTRIBUTES, new VolumeSetAttributes.Builder()
@@ -105,9 +107,9 @@ public class AzureVolumeResourceBuilder extends AbstractAzureComputeBuilder {
                             .withDeleteOnTermination(Boolean.TRUE)
                             .withVolumes(
                                     template.getVolumes().stream()
-                                            .map(volume -> new VolumeSetAttributes.Volume(resourceNameService.resourceName(
-                                                    ResourceType.AZURE_DISK, stackName, groupName, privateId, template.getVolumes().indexOf(volume)), null,
-                                                    volume.getSize(), volume.getType()))
+                                            .map(volume -> new VolumeSetAttributes.Volume(
+                                                    resourceNameService.resourceName(ResourceType.AZURE_DISK, stackName, groupName, privateId,
+                                                            template.getVolumes().indexOf(volume), stackCrn), null, volume.getSize(), volume.getType()))
                                             .collect(Collectors.toList()))
                             .build()))
                     .build();
@@ -149,9 +151,12 @@ public class AzureVolumeResourceBuilder extends AbstractAzureComputeBuilder {
             DeviceNameGenerator generator = new DeviceNameGenerator();
             futures.addAll(volumeSet.getVolumes().stream()
                     .map(volume -> intermediateBuilderExecutor.submit(() -> {
-                        Disk result = client.createManagedDisk(
-                                volume.getId(), volume.getSize(), AzureDiskType.getByValue(
-                                        volume.getType()), region, resourceGroupName, cloudStack.getTags());
+                        Disk result = client.getDiskByName(resourceGroupName, volume.getId());
+                        if (result == null) {
+                            result = client.createManagedDisk(
+                                    volume.getId(), volume.getSize(), AzureDiskType.getByValue(
+                                            volume.getType()), region, resourceGroupName, cloudStack.getTags());
+                        }
                         String volumeId = result.id();
                         volumeSetMap.get(resource.getName()).add(new VolumeSetAttributes.Volume(volumeId, generator.next(), volume.getSize(), volume.getType()));
                     }))

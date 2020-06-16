@@ -1,6 +1,7 @@
 package com.sequenceiq.datalake.controller.sdx;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
@@ -12,6 +13,7 @@ import static org.mockito.Mockito.when;
 import java.util.HashMap;
 import java.util.Map;
 
+import com.sequenceiq.sdx.api.model.SetRangerCloudIdentityMappingRequest;
 import org.apache.commons.lang3.tuple.Pair;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -37,6 +39,7 @@ import com.sequenceiq.sdx.api.model.SdxClusterRequest;
 import com.sequenceiq.sdx.api.model.SdxClusterResponse;
 import com.sequenceiq.sdx.api.model.SdxClusterShape;
 import com.sequenceiq.sdx.api.model.SdxClusterStatusResponse;
+import org.springframework.security.access.AccessDeniedException;
 
 @ExtendWith(MockitoExtension.class)
 class SdxControllerTest {
@@ -112,6 +115,15 @@ class SdxControllerTest {
         assertEquals("crn:sdxcluster", sdxClusterResponse.getCrn());
         assertEquals(SdxClusterStatusResponse.REQUESTED, sdxClusterResponse.getStatus());
         assertEquals("statusreason", sdxClusterResponse.getStatusReason());
+    }
+
+    @Test
+    void testSetRangerCloudIdentityMappingAsNotInternal() {
+        SetRangerCloudIdentityMappingRequest req = new SetRangerCloudIdentityMappingRequest();
+        Exception exception = assertThrows(AccessDeniedException.class, () -> {
+            ThreadBasedUserCrnProvider.doAs(USER_CRN, () -> sdxController.setRangerCloudIdentityMapping("test-env", req));
+        });
+        assertEquals(String.format("User %s does not have permission to call this endpoint", USER_CRN), exception.getMessage());
     }
 
     private SdxCluster getValidSdxCluster() {
